@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
 import { db, auth } from './firebase'; 
 import specData from './assets/specData.json';
 
@@ -47,13 +52,11 @@ function App() {
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
 
-  // Reads URL parameter to check if this embedded instance is locked to an isolated view
   const urlParams = new URLSearchParams(window.location.search);
   const lockToTab = urlParams.get('tab');
 
   const currentTabs = Object.keys(specData);
   
-  // Initialize tab choice based on URL routing string or fallback to standard index 0
   const [activeTab, setActiveTab] = useState(() => {
     if (lockToTab && currentTabs.includes(lockToTab)) {
       return lockToTab;
@@ -73,11 +76,9 @@ function App() {
   const [categoryOrder, setCategoryOrder] = useState({});
 
   const [user, setUser] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Sync state variables
+  // Sync state management variables
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
 
@@ -115,7 +116,13 @@ function App() {
     });
 
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      if (currentUser && currentUser.email && !currentUser.email.toLowerCase().endsWith('@denovix.com')) {
+        signOut(auth);
+        setUser(null);
+        setAuthError('Access Denied. Entry restricted to verified @DeNovix.com emails only.');
+      } else {
+        setUser(currentUser);
+      }
     });
 
     return () => {
@@ -127,7 +134,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Keep user state active, but wipe interactive filters cleanly upon changing tabs
     setFilterModes([]);
     setThroughput('all');
     setFilterOptics([]);
@@ -143,12 +149,10 @@ function App() {
 
   const visibleProducts = allProducts.filter(product => !hiddenItems[product]);
 
-  // Dynamic Parameter Filter Engine (Smart Context Hybrid Routing Sorter)
   const productsToRender = visibleProducts.filter(product => {
     const meta = PRODUCT_METADATA[product] || { type: 'fallback' };
     if (meta.type === 'fallback') return true; 
 
-    // --- Tab Scenario A: Spectrophotometer Logic Matrix ---
     if (activeTab === 'Spectrophotometers / Fluorometers' && meta.type === 'spec') {
       const totalCapabilities = [...meta.modes, ...meta.optionalModes];
       if (filterModes.length > 0) {
@@ -159,20 +163,16 @@ function App() {
       if (filterThroughput === 'multi' && !meta.multi) return false;
     }
 
-    // --- Tab Scenario B: Cell Counter Logic Matrix (Strict Exclusionary Capability) ---
     if (activeTab === 'Cell Counters' && meta.type === 'counter') {
       if (filterOptics.length > 0) {
         const filterableOptics = ['Brightfield', 'Fluorescence'];
-        
         const hasUnselectedCapability = filterableOptics.some(optic => {
           const userDeselectedIt = !filterOptics.includes(optic);
           const instrumentHasIt = meta.optics?.includes(optic);
           return userDeselectedIt && instrumentHasIt;
         });
-
         if (hasUnselectedCapability) return false;
       }
-      
       if (filterMag === 'standard' && !meta.magnification?.includes('Standard Magnification')) return false;
       if (filterMag === 'high' && !meta.magnification?.includes('High Magnification')) return false;
     }
@@ -180,43 +180,80 @@ function App() {
     return true;
   });
 
+  // Dynamic Height Reporter Hook: Automatically measures and posts height bounds to the parent window
+  useEffect(() => {
+    const reportHeightToParent = () => {
+      const actualContainerHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+      window.parent.postMessage({ type: 'RESIZE_IFRAME', height: actualContainerHeight }, '*');
+    };
+
+    reportHeightToParent(); // Initial baseline measurement
+
+    // Watch for dynamic page modifications (user checking product configurations)
+    const pageResizeObserver = new ResizeObserver(() => reportHeightToParent());
+    pageResizeObserver.observe(document.body);
+
+    return () => pageResizeObserver.disconnect();
+  }, [activeTab, productsToRender]);
+
   const handlePrint = () => {
     window.print();
   };
 
-  // Triggers application pipeline to parse the Google Sheet data live on demand
   const triggerGoogleSheetsSync = async () => {
     setIsSyncing(true);
-    setSyncMessage('📡 Fetching fresh spreadsheet data streams...');
+    setSyncMessage('📡 Broadcasting build token payload...');
     
-    // Replace with your true Netlify or Vercel Build Hook URL string
+    // Paste your real Netlify build hook string here
     const PRODUCTION_BUILD_HOOK = "https://api.netlify.com/build_hooks/YOUR_NETLIFY_HOOK_ID";
 
+    if (PRODUCTION_BUILD_HOOK.includes("YOUR_NETLIFY_HOOK_ID")) {
+      setSyncMessage('⚠️ Netlify Hook URL not configured yet.');
+      setTimeout(() => { setSyncMessage(''); setIsSyncing(false); }, 4000);
+      return;
+    }
+
     try {
-      // Ping Production Server Pipeline
-      const productionResponse = await fetch(PRODUCTION_BUILD_HOOK, { method: 'POST' });
-      
-      // If debugging locally on your computer, pull files directly to localhost environment
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        setSyncMessage('🔄 Re-indexing local data sheets...');
+        setSyncMessage('🔄 Re-indexing local development rows...');
         const localResponse = await fetch('http://localhost:5174/api/fetch-sheets-now', { method: 'POST' });
         if (localResponse.ok) {
-          setSyncMessage('✅ Localhost synchronized! Reloading table layouts...');
-          setTimeout(() => window.location.reload(), 1500);
+          setSyncMessage('✅ Localhost synchronized! Reloading view matrices...');
+          setTimeout(() => window.location.reload(), 1200);
           return;
         }
       }
 
-      if (productionResponse.ok) {
-        setSyncMessage('🚀 Sync initiated successfully! Netlify will update live in ~1-2 minutes.');
-      } else {
-        setSyncMessage('❌ Cloud sync execution rejected.');
-      }
+      await fetch(PRODUCTION_BUILD_HOOK, { 
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      setSyncMessage('🚀 Sync triggered safely! Netlify production servers will refresh in ~1-2 mins.');
     } catch (err) {
-      setSyncMessage('❌ API Connection timed out.');
+      setSyncMessage('❌ Sync operation timed out.');
     }
     
     setTimeout(() => { setSyncMessage(''); setIsSyncing(false); }, 6000);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setAuthError('');
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ hd: 'denovix.com' });
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user.email || '';
+
+      if (!email.toLowerCase().endsWith('@denovix.com')) {
+        await signOut(auth);
+        setAuthError('Access Denied. Entry restricted to verified @DeNovix.com emails only.');
+      }
+    } catch (err) {
+      setAuthError('Authentication cancelled or intercepted by security boundaries.');
+    }
   };
 
   const toggleVisibilitySetting = async (keyName) => {
@@ -233,7 +270,6 @@ function App() {
     });
   };
 
-  // Data Grouping Engine
   const groupedCategories = {};
   rawRows.slice(1).forEach((row, originalIndex) => {
     const categoryName = row[0] ? row[0].trim() : 'General Specifications';
@@ -280,16 +316,6 @@ function App() {
     }, { merge: true });
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setAuthError('');
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      setAuthError('Invalid administrator credentials. Access Denied.');
-    }
-  };
-
   const handleLogout = () => {
     signOut(auth);
   };
@@ -308,26 +334,59 @@ function App() {
     setFilterMag('all');
   };
 
+  // Helper macro function to generate clean, self-resizing WordPress iframe embed string blocks
+  const generateSelfResizingIframeSnippet = (targetUrl, uniqueElementId) => {
+    return `<iframe id="${uniqueElementId}" src="${targetUrl}" width="100%" style="border:none; overflow:hidden;" scrolling="no"></iframe>\n\n<script>\n  window.addEventListener('message', function(e) {\n    if (e.data && e.data.type === 'RESIZE_IFRAME') {\n      var frameElement = document.getElementById('${uniqueElementId}');\n      if (frameElement) {\n        frameElement.style.height = (e.data.height + 15) + 'px';\n      }\n    }\n  });\n</script>`;
+  };
+
   // ==================== VIEW A: THE ADMIN PORTAL DASHBOARD ====================
   if (isAdminView) {
     if (!user) {
       return (
-        <div style={{ maxWidth: '420px', margin: '100px auto', padding: '40px', border: '1px solid #e2e8f0', borderRadius: '12px', fontFamily: 'system-ui, sans-serif', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: '#fff' }}>
-          <h2 style={{ marginTop: '0', marginBottom: '24px', color: '#0f172a', fontWeight: '700', textAlign: 'center' }}>🔒 Admin Portal Access</h2>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>Email Address</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%', padding: '11px 14px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box', fontSize: '14px' }} />
+        <div style={{ maxWidth: '420px', margin: '120px auto', padding: '40px', border: '1px solid #e2e8f0', borderRadius: '12px', fontFamily: 'system-ui, sans-serif', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', background: '#fff', textAlign: 'center' }}>
+          <span style={{ fontSize: '44px', display: 'block', marginBottom: '16px' }}>🔒</span>
+          <h2 style={{ marginTop: '0', marginBottom: '8px', color: '#0f172a', fontWeight: '800', letterSpacing: '-0.02em' }}>Control Console Login</h2>
+          <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 28px 0', lineHeight: '1.4' }}>Authentication is restricted exclusively to validated corporate administrators.</p>
+          
+          <button 
+            onClick={handleGoogleSignIn}
+            style={{ 
+              width: '100%', 
+              padding: '12px', 
+              backgroundColor: '#ffffff', 
+              color: '#1e293b', 
+              border: '1px solid #cbd5e1', 
+              borderRadius: '6px', 
+              fontWeight: '600', 
+              cursor: 'pointer', 
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+              transition: 'background-color 0.15s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.61c-.29 1.53-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-8.58z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.11 0-5.74-2.11-6.68-4.96H1.21v3.15C3.18 21.88 7.31 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.32 14.24A7.16 7.16 0 0 1 5 12c0-.79.13-1.57.32-2.34V6.51H1.21A11.94 11.94 0 0 0 0 12c0 1.92.45 3.74 1.21 5.39l4.11-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.19 15.24 0 12 0 7.31 0 3.18 2.12 1.21 5.39l4.11 3.15c.94-2.85 3.57-4.96 6.68-4.96z"/>
+            </svg>
+            Sign in with DeNovix Google Workspace
+          </button>
+
+          {authError && (
+            <div style={{ marginTop: '20px', padding: '12px', background: '#fef2f2', borderRadius: '6px', border: '1px solid #fecaca' }}>
+              <p style={{ color: '#dc2626', margin: '0', fontSize: '13px', fontWeight: '500', lineHeight: '1.4' }}>{authError}</p>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: '100%', padding: '11px 14px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box', fontSize: '14px' }} />
-            </div>
-            {authError && <p style={{ color: '#dc2626', margin: '0', fontSize: '13px', fontWeight: '500' }}>{authError}</p>}
-            <button type="submit" style={{ padding: '12px', backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Sign In</button>
-          </form>
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <button onClick={() => navigateTo('/')} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', textDecoration: 'underline' }}>← Back to Public Specs View</button>
+          )}
+
+          <div style={{ textAlign: 'center', marginTop: '28px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+            <button onClick={() => navigateTo('/')} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px', textDecoration: 'underline' }}>← Return to Specifications Matrix</button>
           </div>
         </div>
       );
@@ -336,7 +395,6 @@ function App() {
     return (
       <div style={{ padding: '40px', fontFamily: 'system-ui, sans-serif', background: '#f8fafc', minHeight: '100vh', color: '#0f172a' }}>
         
-        {/* Admin Header Action Strip Dashboard Panel */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', paddingBottom: '20px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <span style={{ fontSize: '32px' }}>⚙️</span>
@@ -345,8 +403,8 @@ function App() {
               <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: '14px' }}>Manage visibility metrics and structure the layouts for your specs tables.</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: '#f8fafc', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            {syncMessage && <span style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>{syncMessage}</span>}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: '#fff', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            {syncMessage && <span style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>{syncMessage}</span>}
             <button 
               disabled={isSyncing}
               onClick={triggerGoogleSheetsSync} 
@@ -393,30 +451,32 @@ function App() {
           </div>
         </div>
 
+        {/* 🔗 WordPress Embed Code Generator Section */}
         <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700' }}>🔗 WordPress Embed Code Generator</h3>
-          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Copy these frame strings to deploy isolated segment tables into individual WordPress sub-pages.</p>
+          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700' }}>🔗 WordPress Dynamic Embed Code Generator</h3>
+          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Copy these frame strings to deploy isolated segment tables into individual WordPress sub-pages. These snippets include a real-time resizing listener to adjust heights automatically.</p>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <strong style={{ fontSize: '14px', color: '#0f172a' }}>Master Comparison Grid View (All Tabs Active)</strong>
                 <div style={{ fontSize: '12px', color: '#64748b', fontFamily: 'monospace', marginTop: '4px' }}>{window.location.origin}/</div>
               </div>
               <button 
                 onClick={() => {
-                  navigator.clipboard.writeText(`<iframe src="${window.location.origin}/" width="100%" height="900px" style="border:none;" scrolling="no"></iframe>`);
-                  alert("Copied Master Framework Iframe string!");
+                  const masterSnippet = generateSelfResizingIframeSnippet(`${window.location.origin}/`, 'denovix-master-frame');
+                  navigator.clipboard.writeText(masterSnippet);
+                  alert("Copied Auto-Resizing Master Framework snippet!");
                 }}
                 style={{ padding: '7px 14px', fontSize: '13px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
               >
-                Copy Iframe Snippet
+                Copy Resizing Snippet
               </button>
             </div>
 
-            {currentTabs.map(tab => {
+            {currentTabs.map((tab, idx) => {
               const targetedUrl = `${window.location.origin}/?tab=${encodeURIComponent(tab)}`;
-              const iframeString = `<iframe src="${targetedUrl}" width="100%" height="900px" style="border:none;" scrolling="no"></iframe>`;
+              const cleaningRegexId = `denovix-tab-frame-${idx}`;
               
               return (
                 <div key={tab} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', flexWrap: 'wrap', gap: '12px' }}>
@@ -426,12 +486,13 @@ function App() {
                   </div>
                   <button 
                     onClick={() => {
-                      navigator.clipboard.writeText(iframeString);
-                      alert(`Copied layout snippet for ${tab}!`);
+                      const dynamicSnippet = generateSelfResizingIframeSnippet(targetedUrl, cleaningRegexId);
+                      navigator.clipboard.writeText(dynamicSnippet);
+                      alert(`Copied auto-resizing layout snippet for ${tab}!`);
                     }}
                     style={{ padding: '7px 14px', fontSize: '13px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
                   >
-                    Copy Iframe Snippet
+                    Copy Resizing Snippet
                   </button>
                 </div>
               );
