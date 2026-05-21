@@ -8,14 +8,28 @@ const tabsToFetch = ['Spectrophotometers / Fluorometers', 'Cell Counters', 'Squi
 const spreadsheetId = '1itRN0ghY_ipkYwCnrHhhbMpYy1-no8DQUJYD0Xrj2pM';
 
 async function main() {
-  // Path to your service account key
+  let authConfig;
   const keyPath = path.join(process.cwd(), 'google-credentials.json');
-  
-  const auth = new google.auth.GoogleAuth({
-    keyFile: keyPath,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
 
+  // Multi-environment routing check: If local file is missing, pull credentials from Netlify environment variables
+  if (fs.existsSync(keyPath)) {
+    console.log('📂 Found local google-credentials.json file.');
+    authConfig = {
+      keyFile: keyPath,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    };
+  } else if (process.env.GOOGLE_CREDENTIALS_JSON) {
+    console.log('☁️ Local file missing. Parsing credentials from environment variables...');
+    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+    authConfig = {
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    };
+  } else {
+    throw new Error('❌ Missing authorization credentials! Neither google-credentials.json nor GOOGLE_CREDENTIALS_JSON variable was found.');
+  }
+  
+  const auth = new google.auth.GoogleAuth(authConfig);
   const sheets = google.sheets({ version: 'v4', auth });
   const masterData = {};
 
@@ -39,13 +53,11 @@ async function main() {
     }
   }
 
-  // Ensure the assets directory exists
   const assetsDir = path.join(process.cwd(), 'src', 'assets');
   if (!fs.existsSync(assetsDir)){
       fs.mkdirSync(assetsDir, { recursive: true });
   }
 
-  // Save everything into a single clean JSON file inside your React app
   fs.writeFileSync(
     path.join(assetsDir, 'specData.json'),
     JSON.stringify(masterData, null, 2)
@@ -56,4 +68,5 @@ async function main() {
 
 main().catch((err) => {
   console.error('❌ Error executing data pipeline:', err);
+  process.exit(1); // Force Netlify to fail visibly if data pipeline experiences fetching issues
 });
