@@ -74,6 +74,7 @@ function App() {
   
   const [hiddenItems, setHiddenItems] = useState({});
   const [categoryOrder, setCategoryOrder] = useState({});
+  const [featureOrder, setFeatureOrder] = useState({}); // Sync tracker for custom individual specification row positions
 
   const [user, setUser] = useState(null);
   const [authError, setAuthError] = useState('');
@@ -89,6 +90,10 @@ function App() {
   // Multi-parameter visitor filtering states for Cell Counters
   const [filterOptics, setFilterOptics] = useState([]);
   const [filterMag, setFilterMag] = useState('all');
+
+  // Interactive HTML5 dragging operational states
+  const [draggedCategoryIdx, setDraggedCategoryIdx] = useState(null);
+  const [draggedFeatureInfo, setDraggedFeatureInfo] = useState(null); 
 
   useEffect(() => {
     const unsubscribeTheme = onSnapshot(doc(db, 'app_theme', 'colors'), (docSnap) => {
@@ -109,9 +114,15 @@ function App() {
       }
     });
 
-    const unsubscribeOrder = onSnapshot(doc(db, 'app_settings', 'category_order'), (docSnap) => {
+    const unsubscribeCategoryOrder = onSnapshot(doc(db, 'app_settings', 'category_order'), (docSnap) => {
       if (docSnap.exists()) {
         setCategoryOrder(docSnap.data());
+      }
+    });
+
+    const unsubscribeFeatureOrder = onSnapshot(doc(db, 'app_settings', 'feature_order'), (docSnap) => {
+      if (docSnap.exists()) {
+        setFeatureOrder(docSnap.data());
       }
     });
 
@@ -128,7 +139,8 @@ function App() {
     return () => {
       unsubscribeTheme();
       unsubscribeVisibility();
-      unsubscribeOrder();
+      unsubscribeCategoryOrder();
+      unsubscribeFeatureOrder();
       unsubscribeAuth();
     };
   }, []);
@@ -180,16 +192,15 @@ function App() {
     return true;
   });
 
-  // Dynamic Height Reporter Hook: Automatically measures and posts height bounds to the parent window
+  // Dynamic Height Reporter Hook: Measures and posts document boundaries to parent WordPress page frame
   useEffect(() => {
     const reportHeightToParent = () => {
       const actualContainerHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
       window.parent.postMessage({ type: 'RESIZE_IFRAME', height: actualContainerHeight }, '*');
     };
 
-    reportHeightToParent(); // Initial baseline measurement
+    reportHeightToParent();
 
-    // Watch for dynamic page modifications (user checking product configurations)
     const pageResizeObserver = new ResizeObserver(() => reportHeightToParent());
     pageResizeObserver.observe(document.body);
 
@@ -204,7 +215,6 @@ function App() {
     setIsSyncing(true);
     setSyncMessage('📡 Broadcasting build token payload...');
     
-    // Paste your real Netlify build hook string here
     const PRODUCTION_BUILD_HOOK = "https://api.netlify.com/build_hooks/6a0ea4fbd0b12f31ddc93278";
 
     if (PRODUCTION_BUILD_HOOK.includes("YOUR_NETLIFY_HOOK_ID")) {
@@ -270,6 +280,7 @@ function App() {
     });
   };
 
+  // --- DATA CLUSTERING AND CROSS-PLATFORM INTERACTION INJECTOR ---
   const groupedCategories = {};
   rawRows.slice(1).forEach((row, originalIndex) => {
     const categoryName = row[0] ? row[0].trim() : 'General Specifications';
@@ -300,42 +311,64 @@ function App() {
   });
   const activeSortedCategories = finalCategorySequence.filter(cat => extractedCategories.includes(cat));
 
-  const moveCategoryOrder = async (index, direction) => {
-    const newOrder = [...activeSortedCategories];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+  // Dynamically map internal spec row sequences based on saved Firestore feature maps
+  activeSortedCategories.forEach(catName => {
+    const savedFeatureSequence = featureOrder[`${activeTab}__${catName}`] || [];
+    const elements = groupedCategories[catName] || [];
+
+    elements.sort((a, b) => {
+      const indexA = savedFeatureSequence.indexOf(a.featureName);
+      const indexB = savedFeatureSequence.indexOf(b.featureName);
+      
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      return a.id - b.id; // Fallback to raw spreadsheet index
+    });
+  });
+
+  // --- DRAG AND DROP HANDLERS FOR CATEGORIES & INDIVIDUAL FEATURES ---
+  const handleCategoryDragStart = (idx) => {
+    setDraggedCategoryIdx(idx);
+  };
+
+  const handleCategoryDrop = async (targetIdx) => {
+    if (draggedCategoryIdx === null || draggedCategoryIdx === targetIdx) return;
     
-    const temp = newOrder[index];
-    newOrder[index] = newOrder[targetIndex];
-    newOrder[targetIndex] = temp;
+    const reorderedCategories = [...activeSortedCategories];
+    const [movedItem] = reorderedCategories.splice(draggedCategoryIdx, 1);
+    reorderedCategories.splice(targetIdx, 0, movedItem);
+
+    setDraggedCategoryIdx(null);
 
     const docRef = doc(db, 'app_settings', 'category_order');
     await setDoc(docRef, {
       ...categoryOrder,
-      [activeTab]: newOrder
+      [activeTab]: reorderedCategories
     }, { merge: true });
   };
 
-  const handleLogout = () => {
-    signOut(auth);
+  const handleFeatureDragStart = (categoryName, index) => {
+    setDraggedFeatureInfo({ category: categoryName, index: index });
   };
 
-  const navigateTo = (path) => {
-    window.history.pushState({}, '', path);
-    setIsAdminView(path === '/admin');
+  const handleFeatureDrop = async (categoryName, targetIndex) => {
+    if (!draggedFeatureInfo || draggedFeatureInfo.category !== categoryName || draggedFeatureInfo.index === targetIndex) return;
+
+    const targetList = [...groupedCategories[categoryName]];
+    const [movedFeature] = targetList.splice(draggedFeatureInfo.index, 1);
+    targetList.splice(targetIndex, 0, movedFeature);
+
+    setDraggedFeatureInfo(null);
+
+    const freshStringSequence = targetList.map(item => item.featureName);
+    const docRef = doc(db, 'app_settings', 'feature_order');
+    await setDoc(docRef, {
+      ...featureOrder,
+      [`${activeTab}__${categoryName}`]: freshStringSequence
+    }, { merge: true });
   };
 
-  const isAnyFilterActive = filterModes.length > 0 || filterThroughput !== 'all' || filterOptics.length > 0 || filterMag !== 'all';
-
-  const handleClearAllFilters = () => {
-    setFilterModes([]);
-    setThroughput('all');
-    setFilterOptics([]);
-    setFilterMag('all');
-  };
-
-  // Helper macro function to generate clean, self-resizing WordPress iframe embed string blocks
-// Upgraded CSP-compliant, self-resizing WordPress iframe generator
   const generateSelfResizingIframeSnippet = (targetUrl, uniqueElementId) => {
     return `<iframe \n  id="${uniqueElementId}" \n  src="${targetUrl}" \n  width="100%" \n  style="border:none; overflow:hidden; min-height:500px;" \n  scrolling="no"\n></iframe>`;
   };
@@ -352,21 +385,7 @@ function App() {
           <button 
             onClick={handleGoogleSignIn}
             style={{ 
-              width: '100%', 
-              padding: '12px', 
-              backgroundColor: '#ffffff', 
-              color: '#1e293b', 
-              border: '1px solid #cbd5e1', 
-              borderRadius: '6px', 
-              fontWeight: '600', 
-              cursor: 'pointer', 
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              transition: 'background-color 0.15s'
+              width: '100%', padding: '12px', backgroundColor: '#ffffff', color: '#1e293b', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', transition: 'background-color 0.15s'
             }}
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
@@ -507,23 +526,35 @@ function App() {
           ))}
         </div>
 
+        {/* --- THREE COLUMN ADMINISTRATIVE CONTROL CONTROL DECK --- */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px', alignItems: 'start' }}>
           
+          {/* Column 1: Interactive Category Drag-and-Drop Sorter */}
           <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ marginTop: '0', marginBottom: '8px', fontSize: '16px', fontWeight: '700' }}>↕️ Sort Category Display Order</h3>
+            <h3 style={{ marginTop: '0', marginBottom: '4px', fontSize: '16px', fontWeight: '700' }}>↕️ Drag Category Display Order</h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '12px' }}>Click and hold a category block to change its vertical display rank inside the main tables layout.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {activeSortedCategories.map((cat, idx) => (
-                <div key={cat} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{cat}</span>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button disabled={idx === 0} onClick={() => moveCategoryOrder(idx, 'up')} style={{ padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', cursor: idx === 0 ? 'not-allowed' : 'pointer', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff' }}>▲</button>
-                    <button disabled={idx === activeSortedCategories.length - 1} onClick={() => moveCategoryOrder(idx, 'down')} style={{ padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', cursor: idx === activeSortedCategories.length - 1 ? 'not-allowed' : 'pointer', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff' }}>▼</button>
-                  </div>
+                <div 
+                  key={cat} 
+                  draggable
+                  onDragStart={() => handleCategoryDragStart(idx)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleCategoryDrop(idx)}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', cursor: 'grab', transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                >
+                  <span style={{ color: '#94a3b8', userSelect: 'none', fontSize: '16px' }}>☰</span>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Column 2: Column Visibility Controller Module */}
           <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <h3 style={{ marginTop: '0', marginBottom: '16px', fontSize: '16px', fontWeight: '700' }}>📦 Hide Product Columns</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -536,18 +567,33 @@ function App() {
             </div>
           </div>
 
+          {/* Column 3: Multi-Level Advanced Specifications Row Sorter Engine */}
           <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ marginTop: '0', marginBottom: '16px', fontSize: '16px', fontWeight: '700' }}>✏️ Hide Specification Feature Rows</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '550px', overflowY: 'auto' }}>
+            <h3 style={{ marginTop: '0', marginBottom: '4px', fontSize: '16px', fontWeight: '700' }}>✏️ Hide Specification Feature Rows</h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '12px' }}>Uncheck a row to hide it. Click and drag the handle icon (☰) to shift its sorting display order inside that category block.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '550px', overflowY: 'auto' }}>
               {activeSortedCategories.map(catName => (
                 <div key={catName} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px', background: '#fff' }}>
                   <div style={{ background: '#f1f5f9', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '10px', textTransform: 'uppercase' }}>{catName}</div>
+                  
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {(groupedCategories[catName] || []).map(({ featureName }) => (
-                      <label key={featureName} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: hiddenItems[featureName] ? '#ef4444' : '#334155', fontSize: '13px' }}>
-                        <input type="checkbox" checked={!!hiddenItems[featureName]} onChange={() => toggleVisibilitySetting(featureName)} style={{ width: '15px', height: '15px' }} />
-                        <span style={{ textDecoration: hiddenItems[featureName] ? 'line-through' : 'none' }}>{featureName}</span>
-                      </label>
+                    {(groupedCategories[catName] || []).map(({ featureName }, fIdx) => (
+                      <div
+                        key={featureName}
+                        draggable
+                        onDragStart={() => handleFeatureDragStart(catName, fIdx)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => handleFeatureDrop(catName, fIdx)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', background: '#fafafa', border: '1px solid #f1f5f9'
+                        }}
+                      >
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: hiddenItems[featureName] ? '#ef4444' : '#334155', fontSize: '13px', width: '85%' }}>
+                          <input type="checkbox" checked={!!hiddenItems[featureName]} onChange={() => toggleVisibilitySetting(featureName)} style={{ width: '15px', height: '15px' }} />
+                          <span style={{ textDecoration: hiddenItems[featureName] ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{featureName}</span>
+                        </label>
+                        <span style={{ color: '#cbd5e1', cursor: 'grab', fontSize: '14px', padding: '0 4px', userSelect: 'none' }} title="Drag to reorder row">☰</span>
+                      </div>
                     ))}
                   </div>
                 </div>
