@@ -369,6 +369,25 @@ function App() {
     }, { merge: true });
   };
 
+  // Global Scoping Metrics — MUST SIT ABOVE THE ADMIN CONDITIONAL BLOCKS FOR THE PUBLIC TABLE TO READ THEM
+  const isAnyFilterActive = filterModes.length > 0 || filterThroughput !== 'all' || filterOptics.length > 0 || filterMag !== 'all';
+
+  const handleClearAllFilters = () => {
+    setFilterModes([]);
+    setThroughput('all');
+    setFilterOptics([]);
+    setFilterMag('all');
+  };
+
+  const handleLogout = () => {
+    signOut(auth);
+  };
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path);
+    setIsAdminView(path === '/admin');
+  };
+
   const generateSelfResizingIframeSnippet = (targetUrl, uniqueElementId) => {
     return `<iframe \n  id="${uniqueElementId}" \n  src="${targetUrl}" \n  width="100%" \n  style="border:none; overflow:hidden; min-height:500px;" \n  scrolling="no"\n></iframe>`;
   };
@@ -557,7 +576,7 @@ function App() {
           {/* Column 2: Column Visibility Controller Module */}
           <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <h3 style={{ marginTop: '0', marginBottom: '16px', fontSize: '16px', fontWeight: '700' }}>📦 Hide Product Columns</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', columnGap: '12px', flexDirection: 'column', gap: '12px' }}>
               {allProducts.map(product => (
                 <label key={product} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: hiddenItems[product] ? '#ef4444' : '#0f172a', fontWeight: hiddenItems[product] ? '600' : '500', fontSize: '14px', padding: '10px', background: hiddenItems[product] ? '#fef2f2' : '#f8fafc', borderRadius: '8px', border: '1px solid', borderColor: hiddenItems[product] ? '#fecaca' : '#e2e8f0' }}>
                   <input type="checkbox" checked={!!hiddenItems[product]} onChange={() => toggleVisibilitySetting(product)} style={{ width: '16px', height: '16px' }} />
