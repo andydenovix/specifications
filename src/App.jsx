@@ -205,7 +205,7 @@ function App() {
     setSyncMessage('📡 Broadcasting build token payload...');
     
     // Paste your real Netlify build hook string here
-    const PRODUCTION_BUILD_HOOK = "https://api.netlify.com/build_hooks/YOUR_NETLIFY_HOOK_ID";
+    const PRODUCTION_BUILD_HOOK = "https://api.netlify.com/build_hooks/6a0ea4fbd0b12f31ddc93278";
 
     if (PRODUCTION_BUILD_HOOK.includes("YOUR_NETLIFY_HOOK_ID")) {
       setSyncMessage('⚠️ Netlify Hook URL not configured yet.');
@@ -471,7 +471,7 @@ function App() {
                 }}
                 style={{ padding: '7px 14px', fontSize: '13px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
               >
-                Copy Resizing Snippet
+                Copy Snippet
               </button>
             </div>
 
@@ -493,7 +493,7 @@ function App() {
                     }}
                     style={{ padding: '7px 14px', fontSize: '13px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
                   >
-                    Copy Resizing Snippet
+                    Copy Snippet
                   </button>
                 </div>
               );
@@ -625,7 +625,7 @@ function App() {
             alignItems: 'center', 
             gap: '8px' 
           }}>
-            <span>⚡</span> Configure Instrumentation Requirements
+            <span></span> Configure Instrumentation Requirements
           </h4>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
@@ -785,7 +785,7 @@ function App() {
               {isAnyFilterActive && (
                 <button onClick={handleClearAllFilters} style={{ padding: '9px 16px', background: 'none', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Clear Selections</button>
               )}
-              <button onClick={handlePrint} style={{ padding: '10px 22px', backgroundColor: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'var(--font-family)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>🖨️ Export / Print Matrix</button>
+              <button onClick={handlePrint} style={{ padding: '10px 22px', backgroundColor: '#0D1EA0', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'var(--font-family)', boxShadow: '0 1px 3px rgba(17, 35, 225, 0.1)' }}>🖨️ Export / Print </button>
             </div>
           </div>
         </div>
