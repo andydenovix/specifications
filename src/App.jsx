@@ -335,8 +335,9 @@ function App() {
   };
 
   // Helper macro function to generate clean, self-resizing WordPress iframe embed string blocks
+// Upgraded CSP-compliant, self-resizing WordPress iframe generator
   const generateSelfResizingIframeSnippet = (targetUrl, uniqueElementId) => {
-    return `<iframe id="${uniqueElementId}" src="${targetUrl}" width="100%" style="border:none; overflow:hidden;" scrolling="no"></iframe>\n\n<script>\n  window.addEventListener('message', function(e) {\n    if (e.data && e.data.type === 'RESIZE_IFRAME') {\n      var frameElement = document.getElementById('${uniqueElementId}');\n      if (frameElement) {\n        frameElement.style.height = (e.data.height + 15) + 'px';\n      }\n    }\n  });\n</script>`;
+    return `<iframe \n  id="${uniqueElementId}" \n  src="${targetUrl}" \n  width="100%" \n  style="border:none; overflow:hidden; min-height:500px;" \n  scrolling="no"\n></iframe>`;
   };
 
   // ==================== VIEW A: THE ADMIN PORTAL DASHBOARD ====================
