@@ -411,7 +411,7 @@ function App() {
               onClick={triggerGoogleSheetsSync} 
               style={{ padding: '10px 20px', backgroundColor: isSyncing ? '#94a3b8' : '#22c55e', color: '#fff', border: 'none', borderRadius: '6px', cursor: isSyncing ? 'not-allowed' : 'pointer', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(34,197,94,0.15)', opacity: isSyncing ? 0.8 : 1 }}
             >
-              <span>{isSyncing ? '⌛' : '🔄'}</span> {isSyncing ? 'Publishing...' : 'Publish Spreadsheet Updates Live'}
+              <span>{isSyncing ? '⌛' : '🔄'}</span> {isSyncing ? 'Publishing...' : 'Synch Google Sheet'}
             </button>
             <button onClick={() => navigateTo('/')} style={{ padding: '10px 18px', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', color: '#334155' }}>👁️ View Public Matrix</button>
             <button onClick={handleLogout} style={{ padding: '10px 18px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>Logout</button>
