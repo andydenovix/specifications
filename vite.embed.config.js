@@ -13,8 +13,8 @@ export default defineConfig({
       formats: ['iife'],
       fileName: () => 'spec-embed.js',
     },
-    outDir: 'dist-embed',
-    emptyOutDir: true,
+    outDir: 'dist',
+    emptyOutDir: false,
     cssCodeSplit: false,
   },
 });
