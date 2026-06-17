@@ -954,7 +954,7 @@
   "Cell Counters": [
     [
       "Category",
-      "Specification",
+      "Specifications",
       "CellDrop FLi",
       "CellDrop BF",
       "CellDrop FLxi",
@@ -1201,7 +1201,7 @@
       "X"
     ],
     [
-      "",
+      "Features",
       "Volume Range",
       "1 - 1000 µL",
       "X",
@@ -1325,7 +1325,7 @@
       "≥500 cycles at 80% capacity retention under standard conditions (0.2C charge/discharge, 25°C)"
     ],
     [
-      "",
+      "General",
       "Accessories",
       "DeNovix Pipette Tips\nSquid Charging Stand",
       "",

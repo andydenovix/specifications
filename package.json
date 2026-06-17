@@ -6,17 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/fetchData.js && vite build",
+    "build:embed": "node scripts/fetchData.js && vite build --config vite.embed.config.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "firebase": "^12.13.0",
-    "googleapis": "^171.4.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "googleapis": "^171.4.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

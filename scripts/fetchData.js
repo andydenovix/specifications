@@ -41,7 +41,7 @@ async function main() {
     try {
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!A1:Z200`, 
+        range: sheetName, // No cell range = all non-empty data in the sheet
       });
 
       const rows = response.data.values || [];
