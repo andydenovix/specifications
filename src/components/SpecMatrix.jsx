@@ -37,7 +37,7 @@ export default function SpecMatrix({
     if (isEmbed) return;
     const reportHeight = () => {
       const height = document.documentElement.scrollHeight || document.body.scrollHeight;
-      window.parent.postMessage({ type: 'RESIZE_IFRAME', height }, '*');
+      window.parent.postMessage({ type: 'RESIZE_IFRAME', height }, 'https://www.denovix.com');
     };
     reportHeight();
     const observer = new ResizeObserver(reportHeight);
