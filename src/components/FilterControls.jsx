@@ -96,6 +96,32 @@ export default function FilterControls({
     window.open(`${QUOTE_PAGE_URL}?${params.toString()}`, '_blank');
   };
 
+  if (activeTab === 'Squid Pipette') {
+    return (
+      <div className="visitor-controls" style={{ background: '#ffffff', borderRadius: '12px', marginBottom: '32px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ fontSize: '14px', color: '#475569', fontWeight: '700' }}>
+            {productsToRender.length} Matching Models
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleRequestQuote}
+              style={{ padding: '10px 18px', backgroundColor: '#fff', color: 'var(--primary-color)', border: '1.5px solid var(--primary-color)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', fontFamily: 'var(--font-family)' }}
+            >
+              ✉ Request Quote
+            </button>
+            <button
+              onClick={onPrint}
+              style={{ padding: '10px 22px', backgroundColor: 'var(--primary-color)', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'var(--font-family)' }}
+            >
+              🖨️ Export / Print to PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="visitor-controls" style={{ background: '#ffffff', borderRadius: '12px', marginBottom: '32px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
 

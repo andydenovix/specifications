@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { PRODUCT_METADATA } from '../config/products';
 import FilterControls from './FilterControls';
 
+const mdLink = /^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/;
+const bareUrl = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+(\/\S*)?$/;
+
+function renderCell(value) {
+  if (!value) return '—';
+  const md = mdLink.exec(value.trim());
+  if (md) return <a href={md[2]} target="_blank" rel="noreferrer">{md[1]}</a>;
+  const v = value.trim();
+  if (bareUrl.test(v)) {
+    const href = /^https?:\/\//.test(v) ? v : `https://${v}`;
+    return <a href={href} target="_blank" rel="noreferrer">{v}</a>;
+  }
+  return value;
+}
+
 export default function SpecMatrix({
   allProducts,
   headers,
@@ -71,7 +86,7 @@ export default function SpecMatrix({
   });
 
   const isAnyFilterActive = filterModes.length > 0 || filterThroughput !== 'all' || filterOptics.length > 0 || filterMag !== 'all';
-  const showFilters = activeTab === 'Spectrophotometers / Fluorometers' || activeTab === 'Cell Counters';
+  const showFilters = activeTab === 'Spectrophotometers / Fluorometers' || activeTab === 'Cell Counters' || activeTab === 'Squid Pipette';
 
   return (
     <div className="spec-container" style={{ padding: '24px', fontFamily: 'var(--font-family)', color: 'var(--font-color)', background: '#fff', minHeight: isEmbed ? undefined : '100vh' }}>
@@ -215,7 +230,7 @@ export default function SpecMatrix({
                         if (!productsToRender.includes(productName)) return null;
                         return (
                           <td key={colIndex} style={{ padding: '14px 16px', color: 'var(--font-color)', verticalAlign: 'top', whiteSpace: 'pre-wrap' }}>
-                            {rowData[colIndex + 2] || '—'}
+                            {renderCell(rowData[colIndex + 2])}
                           </td>
                         );
                       })}
