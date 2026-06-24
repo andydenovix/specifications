@@ -101,7 +101,7 @@ export default function FilterControls({
       <div className="visitor-controls" style={{ background: '#ffffff', borderRadius: '12px', marginBottom: '32px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ fontSize: '14px', color: '#475569', fontWeight: '700' }}>
-            {productsToRender.length} Matching Models
+            {productsToRender.length > 1 && `${productsToRender.length} Matching Models`}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
@@ -222,7 +222,7 @@ export default function FilterControls({
           {/* Bottom action strip */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ fontSize: '14px', color: '#475569', fontWeight: '700' }}>
-              {productsToRender.length} Matching Models
+              {productsToRender.length > 1 && `${productsToRender.length} Matching Models`}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               {isAnyFilterActive && (
