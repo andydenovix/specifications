@@ -108,7 +108,7 @@ export default function FilterControls({
               onClick={handleRequestQuote}
               style={{ padding: '10px 18px', backgroundColor: '#fff', color: 'var(--primary-color)', border: '1.5px solid var(--primary-color)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', fontFamily: 'var(--font-family)' }}
             >
-              ✉ Request Quote
+              Request Quote
             </button>
             <button
               onClick={onPrint}
@@ -234,7 +234,7 @@ export default function FilterControls({
                 onClick={handleRequestQuote}
                 style={{ padding: '10px 18px', backgroundColor: '#fff', color: 'var(--primary-color)', border: '1.5px solid var(--primary-color)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', fontFamily: 'var(--font-family)' }}
               >
-                ✉ Request Quote
+                Request Quote
               </button>
               <button
                 onClick={onPrint}

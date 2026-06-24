@@ -114,6 +114,14 @@ export default function AdminPortal({
           >
             <span>{isSyncing ? '⌛' : '🔄'}</span> {isSyncing ? 'Publishing...' : 'Sync Google Sheet'}
           </button>
+          <a
+            href="https://docs.google.com/spreadsheets/d/1itRN0ghY_ipkYwCnrHhhbMpYy1-no8DQUJYD0Xrj2pM"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ padding: '10px 18px', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', color: '#334155', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            📊 View Source Sheet
+          </a>
           <button onClick={() => navigateTo('/')} style={{ padding: '10px 18px', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', color: '#334155' }}>👁️ View Public Matrix</button>
           <button onClick={handleLogout} style={{ padding: '10px 18px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>Logout</button>
         </div>

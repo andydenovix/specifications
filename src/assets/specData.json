@@ -1163,10 +1163,22 @@
     [
       "General",
       "Patents",
-      "https://www.denovix.com/patents/",
-      "https://www.denovix.com/patents/",
-      "https://www.denovix.com/patents/",
-      "https://www.denovix.com/patents/"
+      {
+        "v": "https://www.denovix.com/patents/",
+        "l": "https://www.denovix.com/patents/"
+      },
+      {
+        "v": "https://www.denovix.com/patents/",
+        "l": "https://www.denovix.com/patents/"
+      },
+      {
+        "v": "https://www.denovix.com/patents/",
+        "l": "https://www.denovix.com/patents/"
+      },
+      {
+        "v": "https://www.denovix.com/patents/",
+        "l": "https://www.denovix.com/patents/"
+      }
     ],
     [
       "General",
@@ -1396,7 +1408,10 @@
     [
       "Pipetting Performance",
       "Performance Validation",
-      "Technical Note 249"
+      {
+        "v": "Technical Note 249",
+        "l": "https://www.denovix.com/tn-249-performance-validation-of-squid-pipette"
+      }
     ],
     [
       "",
@@ -1431,7 +1446,10 @@
     [
       "General",
       "Patents",
-      "denovix.com/patents",
+      {
+        "v": "denovix.com/patents",
+        "l": "https://denovix.com/patents"
+      },
       "X",
       "X"
     ]

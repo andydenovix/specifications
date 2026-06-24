@@ -6,15 +6,20 @@ const mdLink = /^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/;
 const bareUrl = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+(\/\S*)?$/;
 
 function renderCell(value) {
-  if (!value) return '—';
-  const md = mdLink.exec(value.trim());
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'object' && value.l) {
+    return <a href={value.l} target="_blank" rel="noreferrer">{value.v || value.l}</a>;
+  }
+  const str = typeof value === 'object' ? (value.v || '') : value;
+  if (!str) return '—';
+  const md = mdLink.exec(str.trim());
   if (md) return <a href={md[2]} target="_blank" rel="noreferrer">{md[1]}</a>;
-  const v = value.trim();
+  const v = str.trim();
   if (bareUrl.test(v)) {
     const href = /^https?:\/\//.test(v) ? v : `https://${v}`;
     return <a href={href} target="_blank" rel="noreferrer">{v}</a>;
   }
-  return value;
+  return str;
 }
 
 export default function SpecMatrix({

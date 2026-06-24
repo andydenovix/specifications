@@ -39,12 +39,26 @@ async function main() {
     console.log(`📡 Fetching data for tab: "${sheetName}"...`);
     
     try {
-      const response = await sheets.spreadsheets.values.get({
+      const response = await sheets.spreadsheets.get({
         spreadsheetId,
-        range: sheetName, // No cell range = all non-empty data in the sheet
+        ranges: [sheetName],
+        includeGridData: true,
+        fields: 'sheets(data(rowData(values(formattedValue,hyperlink))))',
       });
 
-      const rows = response.data.values || [];
+      const rowData = response.data.sheets?.[0]?.data?.[0]?.rowData || [];
+
+      let rows = rowData.map(row => {
+        if (!row.values) return [];
+        let cells = row.values.map(cell => {
+          const val = cell.formattedValue ?? '';
+          return cell.hyperlink ? { v: val, l: cell.hyperlink } : val;
+        });
+        while (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
+        return cells;
+      });
+      while (rows.length > 0 && rows[rows.length - 1].length === 0) rows.pop();
+
       console.log(`✅ Successfully fetched ${rows.length} rows for "${sheetName}".`);
       masterData[sheetName] = rows;
     } catch (sheetError) {
